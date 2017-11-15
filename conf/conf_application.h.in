@@ -1,0 +1,17 @@
+/**
+ * avr-boilerplate ee.h
+ *
+ * @author Tom Lankhorst
+ * @date 15/11/2017
+ */
+
+#ifndef AVR_BOILERPLATE_CONF_APPLICATION_H_H
+
+// Build variables
+#define BUILD_DATE "@BUILD_DATE@"
+#define GIT_BRANCH "@GIT_BRANCH@"
+#define GIT_COMMIT_HASH "@GIT_COMMIT_HASH@"
+
+#define AVR_BOILERPLATE_CONF_APPLICATION_H_H
+
+#endif //AVR_BOILERPLATE_CONF_APPLICATION_H_H

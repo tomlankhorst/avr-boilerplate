@@ -94,3 +94,5 @@ Temporary Items
 .apdisk
 
 # End of https://www.gitignore.io/api/macos,clion.
+
+.gdb_history

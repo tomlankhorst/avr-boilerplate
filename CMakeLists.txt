@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 2.8)
 
-### TOOLCHAIN ##################################################################
+### TOOLCHAIN #######
 # Set any variables used in the toolchain prior project() call. In that
 # case they are already set and used.
 
@@ -10,27 +10,53 @@ set(AVR_PROGRAMMER jtag2)
 set(AVR_UPLOADTOOL_PORT usb)
 
 # AVR and fuses needs to be set
-set(AVR_MCU atxmega256a3bu)
-set(AVR_MCU_SPEED "32000000UL")
+set(AVR_MCU atmega128)
+set(AVR_MCU_SPEED "32000000")
 set(AVR_BOARD "XMEGA_A3BU_XPLAINED")
 set(AVR_H_FUSE 0xd9)
 set(AVR_L_FUSE 0xc3)
 
-# External libraries
-set(ASF /opt/xdk-asf-3.36.0)
-
-### PROJECT ##################################################################
+### PROJECT ###########
 # Set any variables used in the toolchain prior project() call. In that
 # case they are already set and used.
 
-project(avr-boilerplate)
+project(avr-boilerplate CXX C ASM)
 
 # Device specific definitions
 add_definitions("-DIOPORT_XMEGA_COMPAT")
 add_definitions("-DGFX_MONO_C12832_A1Z=1")
 
+### ATMEL SOFTWARE FRAMEWORK ##########
+# Paths, platforms, cpus
+set(ASF_PATH /opt/xdk-asf-3.36.0)
+SET(ASF_PLATFORM xmega)
+SET(ASF_CPU xmega256a3bu)
 
-### SETUP BUILD ENVIRONMENT ####################################################
+# Which drivers and services to register
+set(ASF_DRIVERS
+  gpio
+  intc
+  spi
+  flashc
+  cycle_counter
+  pdca
+  # etc...
+  )
+set(ASF_SERVICES
+  sysclk
+  # etc...
+  )
+
+# Process the ASF dependencies
+include(cmake/atmel-software-framework.cmake)
+include_directories(${ASF_INCLUDE_DIRS})
+
+# Status ASF
+message(STATUS "ASF: \t\t\t ${ASF_PATH} (${ASF_PLATFORM}, ${ASF_CPU})")
+message(STATUS "ASF drivers: \t ${ASF_DRIVERS}")
+message(STATUS "ASF services: \t ${ASF_SERVICES}")
+
+### SETUP BUILD ENVIRONMENT ########
 # Echo configuration, set build type, set variabels
 # Prepare environment
 
@@ -116,12 +142,21 @@ add_definitions("-ffunction-sections")
 add_definitions("-c")
 # add_definitions("-std=gnu99")
 
-### REGISTER TARGETS ##############################################
-set(AVR_BP_SRCS src/main.c)
+### CONFIGURE HEADER ####
+string(TIMESTAMP BUILD_DATE "%Y-%m-%d %H:%M")
+message(STATUS "Build date set to: ${BUILD_DATE}")
+include(cmake/git-status.cmake)
+
+configure_file(conf/conf_application.h.in conf/conf_application.h @ONLY)
+include_directories(${CMAKE_SOURCE_DIR}/conf)
+include_directories(${CMAKE_CURRENT_BINARY_DIR}/conf)
+
+### REGISTER TARGETS ####
+set(avr_boilerplate_srcs src/avr_boilerplate.c)
 
 add_avr_executable(
     avr_boilerplate
-    ${AVR_BP_SRCS}
+    ${avr_boilerplate_srcs}
 )
 
 #target_link_libraries(
@@ -133,3 +168,6 @@ add_avr_executable(
 #   <library-name>
 #   <sources> <headers>
 #)
+
+set(CMAKE_C_LINK_FLAGS ${CMAKE_C_FLAGS})
+set(CMAKE_CXX_LINK_FLAGS ${CMAKE_CXX_FLAGS})
