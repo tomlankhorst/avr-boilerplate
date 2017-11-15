@@ -1,5 +1,5 @@
 /**
- * avr-boilerplate ee.h
+ * avr-boilerplate
  *
  * @author Tom Lankhorst
  * @date 15/11/2017
@@ -30,10 +30,22 @@ int main( ) {
   ioport_set_pin_low(LED2_PIN);
 
   char out_str[OUTPUT_STR_SIZE];
-
-  snprintf(out_str, OUTPUT_STR_SIZE, "Voltage: %4d mV", 102);
-
+  snprintf(out_str, OUTPUT_STR_SIZE, "Git: %s\nDate: %s", GIT_COMMIT_HASH, BUILD_DATE);
   gfx_mono_draw_string(out_str, 0, 0, &sysfont);
+
+  int i = 0;
+  for(;;){
+
+    i++;
+    delay_ms(10);
+
+    if(!(i%3))
+      ioport_toggle_pin(LED1_PIN);
+
+    if(!(i%5))
+      ioport_toggle_pin(LED2_PIN);
+
+  }
 
   return 0;
 }

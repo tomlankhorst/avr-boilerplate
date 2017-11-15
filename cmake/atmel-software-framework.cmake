@@ -1,3 +1,8 @@
+# Status ASF
+message(STATUS "ASF: ${ASF_PATH} (${ASF_PLATFORM}, ${ASF_CPU})")
+message(STATUS "ASF drivers: ${ASF_DRIVERS}")
+message(STATUS "ASF services: ${ASF_SERVICES}")
+
 
 IF(NOT DEFINED ASF_PLATFORM OR NOT DEFINED ASF_PATH)
   message( FATAL_ERROR "ASF_PLATFORM and ASF_PATH need to be defined to use Atmel Software Framework.")

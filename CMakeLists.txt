@@ -184,11 +184,6 @@ asf_add_custom_header_file(service common spi usart_spi.h)
 # Finally, include the directories
 include_directories(${ASF_INCLUDE_DIRS})
 
-# Status ASF
-message(STATUS "ASF: ${ASF_PATH} (${ASF_PLATFORM}, ${ASF_CPU})")
-message(STATUS "ASF drivers: ${ASF_DRIVERS}")
-message(STATUS "ASF services: ${ASF_SERVICES}")
-
 ### CONFIGURE HEADER ####
 string(TIMESTAMP BUILD_DATE "%Y-%m-%d %H:%M")
 message(STATUS "Build Date: ${BUILD_DATE}")

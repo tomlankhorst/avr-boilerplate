@@ -9,7 +9,7 @@
 #define AVR_BOILERPLATE_CONF_CLOCK_H_H
 
 // 32 MHz clock
-#define CONFIG_SYSCLK_SOURCE        SYSCLK_SRC_RC32MHZ
+#define CONFIG_SYSCLK_SOURCE          SYSCLK_SRC_RC32MHZ
 
 /* Fbus = Fsys / (2 ^ BUS_div) */
 #define CONFIG_SYSCLK_PSADIV          SYSCLK_PSADIV_4
