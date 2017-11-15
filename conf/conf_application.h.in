@@ -18,6 +18,6 @@
 #define LED1_PIN               LED0_GPIO
 #define LED2_PIN               LED1_GPIO
 #define BUTTON_PIN             GPIO_PUSH_BUTTON_0
-#define OUTPUT_STR_SIZE        32
+#define OUTPUT_STR_SIZE        64
 
 #endif //AVR_BOILERPLATE_CONF_APPLICATION_H_H
