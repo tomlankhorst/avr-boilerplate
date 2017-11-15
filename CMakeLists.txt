@@ -1,8 +1,9 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.0)
 
 ### TOOLCHAIN #######
-# Set any variables used in the toolchain prior project() call. In that
-# case they are already set and used.
+# Set any variables used in the toolchain prior project() call (!)
+# In that case they are already set and used.
+include(cmake/generic-gcc-avr.cmake)
 
 # Tools to be used for programming the AVR
 set(AVR_UPLOADTOOL avrdude)
@@ -40,8 +41,6 @@ set(ASF_CPU xmega256a3bu)
 ### SETUP BUILD ENVIRONMENT ########
 # Echo configuration, set build type, set variabels
 # Prepare environment
-
-include(cmake/generic-gcc-avr.cmake)
 
 # Status tools
 message(STATUS "Current uploadtool is: ${AVR_UPLOADTOOL}")

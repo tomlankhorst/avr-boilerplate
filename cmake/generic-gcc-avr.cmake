@@ -56,7 +56,7 @@ set(CMAKE_ASM_FLAGS   "-x assembler-with-cpp ${CFLAGS}")
 set(CMAKE_C_STANDARD  99 )
 
 # todo uitzoeken
-SET(CMAKE_SHARED_LIBRARY_LINK_C_FLAGS)
+# SET(CMAKE_SHARED_LIBRARY_LINK_C_FLAGS)
 
 ##########################################################################
 # some necessary tools and variables for AVR builds, which may not
