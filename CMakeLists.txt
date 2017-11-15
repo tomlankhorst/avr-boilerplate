@@ -6,11 +6,11 @@ cmake_minimum_required(VERSION 2.8)
 
 # Tools to be used for programming the AVR
 set(AVR_UPLOADTOOL avrdude)
-set(AVR_PROGRAMMER jtag2)
+set(AVR_PROGRAMMER atmelice)
 set(AVR_UPLOADTOOL_PORT usb)
 
 # AVR and fuses needs to be set
-set(AVR_MCU atmega128)
+set(AVR_MCU "atxmega256a3bu")
 set(AVR_MCU_SPEED "32000000")
 set(AVR_BOARD "XMEGA_A3BU_XPLAINED")
 set(AVR_H_FUSE 0xd9)
@@ -25,36 +25,17 @@ project(avr-boilerplate CXX C ASM)
 # Device specific definitions
 add_definitions("-DIOPORT_XMEGA_COMPAT")
 add_definitions("-DGFX_MONO_C12832_A1Z=1")
+add_definitions("-DCONFIG_NVM_IGNORE_XMEGA_A3_D3_REVB_ERRATA")
+
+if(AVR_BOARD)
+  add_definitions("-DBOARD=${AVR_BOARD}")
+endif(AVR_BOARD)
 
 ### ATMEL SOFTWARE FRAMEWORK ##########
 # Paths, platforms, cpus
 set(ASF_PATH /opt/xdk-asf-3.36.0)
-SET(ASF_PLATFORM xmega)
-SET(ASF_CPU xmega256a3bu)
-
-# Which drivers and services to register
-set(ASF_DRIVERS
-  gpio
-  intc
-  spi
-  flashc
-  cycle_counter
-  pdca
-  # etc...
-  )
-set(ASF_SERVICES
-  sysclk
-  # etc...
-  )
-
-# Process the ASF dependencies
-include(cmake/atmel-software-framework.cmake)
-include_directories(${ASF_INCLUDE_DIRS})
-
-# Status ASF
-message(STATUS "ASF: \t\t\t ${ASF_PATH} (${ASF_PLATFORM}, ${ASF_CPU})")
-message(STATUS "ASF drivers: \t ${ASF_DRIVERS}")
-message(STATUS "ASF services: \t ${ASF_SERVICES}")
+set(ASF_PLATFORM xmega)
+set(ASF_CPU xmega256a3bu)
 
 ### SETUP BUILD ENVIRONMENT ########
 # Echo configuration, set build type, set variabels
@@ -130,7 +111,7 @@ add_definitions("-DBOARD=${AVR_BOARD}")
 add_definitions("-fpack-struct")
 add_definitions("-fshort-enums")
 add_definitions("-Wall")
-add_definitions("-Werror")
+# add_definitions("-Werror")
 # http://gcc.gnu.org/onlinedocs/gcc-4.8.2/gcc/Alternate-Keywords.html#Alternate-Keywords
 # [...]-pedantic and other options cause warnings for many GNU C extensions. You can prevent such warnings within
 # one expression by writing __extension__ before the expression. __extension__ has no effect aside from this.[...]
@@ -142,9 +123,75 @@ add_definitions("-ffunction-sections")
 add_definitions("-c")
 # add_definitions("-std=gnu99")
 
+### INCLUDE ASF ####
+# Which drivers and services to register
+set(ASF_DRIVERS
+  cpu
+  nvm
+  usart
+  sleep
+  pmic
+  # etc...
+  )
+set(ASF_SERVICES
+  clock
+  delay
+  gpio
+  gfx_mono
+  ioport
+  sleepmgr
+  spi
+  # etc...
+  )
+
+# Process the ASF dependencies
+include(cmake/atmel-software-framework.cmake)
+
+# Extras
+
+# Board LED
+asf_add_custom_header_file(board xmega xmega_a3bu_xplained led.h)
+
+# IOPort compat
+asf_add_custom_source_file(service common ioport xmega/ioport_compat.c)
+
+# Sleepmgr for XMEGA
+asf_add_custom_source_file(service common sleepmgr xmega/sleepmgr.c)
+
+# CPU
+asf_add_custom_asm_file(driver xmega cpu ccp.S)
+asf_add_custom_header_file(driver xmega cpu ccp.h)
+
+# Clock
+asf_add_custom_source_file(service common clock xmega/sysclk.c)
+asf_add_custom_header_file(service common clock sysclk.h)
+
+# Display
+asf_add_custom_source_file(component common display st7565r/st7565r.c)
+asf_add_custom_header_file(component common display st7565r/st7565r.h)
+
+asf_add_custom_source_file(service common gfx_mono gfx_mono_c12832_a1z.c)
+asf_add_custom_source_file(service common gfx_mono gfx_mono_framebuffer.c)
+asf_add_custom_source_file(service common gfx_mono gfx_mono_generic.c)
+asf_add_custom_source_file(service common gfx_mono gfx_mono_text.c)
+asf_add_custom_source_file(service common gfx_mono sysfont.c)
+
+# USART SPI
+asf_add_custom_source_file(service common spi usart_spi.c)
+asf_add_custom_source_file(service common spi xmega_usart_spi/usart_spi.c)
+asf_add_custom_header_file(service common spi usart_spi.h)
+
+# Finally, include the directories
+include_directories(${ASF_INCLUDE_DIRS})
+
+# Status ASF
+message(STATUS "ASF: ${ASF_PATH} (${ASF_PLATFORM}, ${ASF_CPU})")
+message(STATUS "ASF drivers: ${ASF_DRIVERS}")
+message(STATUS "ASF services: ${ASF_SERVICES}")
+
 ### CONFIGURE HEADER ####
 string(TIMESTAMP BUILD_DATE "%Y-%m-%d %H:%M")
-message(STATUS "Build date set to: ${BUILD_DATE}")
+message(STATUS "Build Date: ${BUILD_DATE}")
 include(cmake/git-status.cmake)
 
 configure_file(conf/conf_application.h.in conf/conf_application.h @ONLY)
@@ -152,12 +199,18 @@ include_directories(${CMAKE_SOURCE_DIR}/conf)
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/conf)
 
 ### REGISTER TARGETS ####
-set(avr_boilerplate_srcs src/avr_boilerplate.c)
+set(avr_boilerplate_srcs
+  src/init.c
+  src/avr_boilerplate.c
+  ${ASF_SOURCE_FILES}
+  )
 
 add_avr_executable(
     avr_boilerplate
     ${avr_boilerplate_srcs}
 )
+
+include_directories(include)
 
 #target_link_libraries(
 #    <library-name>.elf

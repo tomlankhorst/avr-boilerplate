@@ -1,0 +1,26 @@
+/**
+ * avr-boilerplate
+ *
+ * @author Tom Lankhorst
+ * @date 15/11/2017
+ */
+
+#ifndef AVR_BOILERPLATE_CONF_ST7565R_H
+#define AVR_BOILERPLATE_CONF_ST7565R_H
+
+// USART SPI interface
+#define ST7565R_USART_SPI_INTERFACE
+#define ST7565R_USART_SPI &USARTD0
+
+// Minimum clock period is 50ns@3.3V -> max frequency is 20MHz
+#define ST7565R_CLOCK_SPEED 1000000
+
+#define ST7565R_DISPLAY_CONTRAST_MAX 80
+#define ST7565R_DISPLAY_CONTRAST_MIN 70
+
+// Pin mapping A3BU-Xplained
+#define ST7565R_A0_PIN       NHD_C12832A1Z_REGISTER_SELECT
+#define ST7565R_CS_PIN       NHD_C12832A1Z_CSN
+#define ST7565R_RESET_PIN    NHD_C12832A1Z_RESETN
+
+#endif //AVR_BOILERPLATE_CONF_ST7565R_H

@@ -6,12 +6,18 @@
  */
 
 #ifndef AVR_BOILERPLATE_CONF_APPLICATION_H_H
+#define AVR_BOILERPLATE_CONF_APPLICATION_H_H
 
 // Build variables
 #define BUILD_DATE "@BUILD_DATE@"
 #define GIT_BRANCH "@GIT_BRANCH@"
 #define GIT_COMMIT_HASH "@GIT_COMMIT_HASH@"
 
-#define AVR_BOILERPLATE_CONF_APPLICATION_H_H
+// Application
+#define INPUT_PIN              ADCCH_POS_PIN0
+#define LED1_PIN               LED0_GPIO
+#define LED2_PIN               LED1_GPIO
+#define BUTTON_PIN             GPIO_PUSH_BUTTON_0
+#define OUTPUT_STR_SIZE        32
 
 #endif //AVR_BOILERPLATE_CONF_APPLICATION_H_H

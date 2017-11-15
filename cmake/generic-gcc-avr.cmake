@@ -49,7 +49,10 @@ find_program(AVRSIM simavr)
 set(CMAKE_SYSTEM_NAME Generic)
 set(CMAKE_SYSTEM_PROCESSOR avr)
 set(CMAKE_C_COMPILER ${AVR_CC})
+set(CMAKE_ASM_COMPILER ${AVR_CC})
 set(CMAKE_CXX_COMPILER ${AVR_CXX})
+
+set(CMAKE_ASM_FLAGS   "-x assembler-with-cpp ${CFLAGS}")
 
 ##########################################################################
 # some necessary tools and variables for AVR builds, which may not
@@ -165,7 +168,7 @@ function(add_avr_executable EXECUTABLE_NAME)
     ${elf_file}
     PROPERTIES
     COMPILE_FLAGS "-mmcu=${AVR_MCU}"
-    LINK_FLAGS "-mmcu=${AVR_MCU} -Wl,--gc-sections -mrelax -Wl,-Map,${map_file}"
+    LINK_FLAGS "-mmcu=${AVR_MCU} -Wl,--gc-sections -mrelax -Wl,-Map,${map_file} -Wl,--section-start=.BOOT=0x40000"
   )
 
   add_custom_command(
