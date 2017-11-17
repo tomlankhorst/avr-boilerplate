@@ -130,6 +130,8 @@ set(ASF_DRIVERS
   usart
   sleep
   pmic
+  qdec
+  tc
   # etc...
   )
 set(ASF_SERVICES
@@ -157,6 +159,9 @@ asf_add_custom_source_file(service common ioport xmega/ioport_compat.c)
 # Sleepmgr for XMEGA
 asf_add_custom_source_file(service common sleepmgr xmega/sleepmgr.c)
 
+# NVM
+asf_add_custom_asm_file(driver xmega nvm nvm_asm.S)
+
 # CPU
 asf_add_custom_asm_file(driver xmega cpu ccp.S)
 asf_add_custom_header_file(driver xmega cpu ccp.h)
@@ -180,6 +185,31 @@ asf_add_custom_source_file(service common spi usart_spi.c)
 asf_add_custom_source_file(service common spi xmega_usart_spi/usart_spi.c)
 asf_add_custom_header_file(service common spi usart_spi.h)
 
+# TWI Slave
+asf_add_custom_source_file(service common twi twi_slave.c)
+asf_add_custom_header_file(service common twi twi_slave.h)
+asf_add_custom_header_file(driver xmega twi twi_common.h)
+asf_add_custom_source_file(driver xmega twi twis.c)
+asf_add_custom_header_file(driver xmega twi twis.h)
+
+# USB
+asf_add_custom_source_file(service common usb class/cdc/device/udi_cdc.c)
+asf_add_custom_source_file(service common usb class/cdc/device/udi_cdc_desc.c)
+asf_add_custom_source_file(service common usb udc/udc.c)
+asf_add_custom_source_file(driver xmega usb usb_device.c)
+asf_add_custom_header_file(service common usb usb_protocol.h)
+asf_add_custom_header_file(service common usb usb_atmel.h)
+asf_add_custom_header_file(service common usb udc/udc.h)
+asf_add_custom_header_file(service common usb class/cdc/usb_protocol_cdc.h)
+asf_add_custom_header_file(service common usb class/cdc/device/udi_cdc.h)
+asf_add_custom_header_file(driver xmega usb usb_device.h)
+
+# stdio
+asf_add_custom_source_file(util common stdio read.c)
+asf_add_custom_source_file(util common stdio write.c)
+asf_add_custom_source_file(util common stdio stdio_usb/stdio_usb.c)
+asf_add_custom_header_file(util common stdio stdio_usb/stdio_usb.h)
+
 # Finally, include the directories
 include_directories(${ASF_INCLUDE_DIRS})
 
@@ -188,7 +218,7 @@ string(TIMESTAMP BUILD_DATE "%Y-%m-%d %H:%M")
 message(STATUS "Build Date: ${BUILD_DATE}")
 include(cmake/git-status.cmake)
 
-configure_file(conf/conf_application.h.in conf/conf_application.h @ONLY)
+configure_file(conf/conf_build.h.in conf/conf_build.h @ONLY)
 include_directories(${CMAKE_SOURCE_DIR}/conf)
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/conf)
 
@@ -216,5 +246,5 @@ include_directories(include)
 #   <sources> <headers>
 #)
 
-set(CMAKE_C_LINK_FLAGS ${CMAKE_C_FLAGS})
+set(CMAKE_C_LINK_FLAGS "${CMAKE_C_FLAGS} -Wl,-u,vfprintf -lprintf_flt")
 set(CMAKE_CXX_LINK_FLAGS ${CMAKE_CXX_FLAGS})

@@ -44,6 +44,16 @@
 // From module: Part identification macros
 #include <parts.h>
 
+// From module: TC - Timer Counter
+#include <tc.h>
+
+// From module: TWI - Two-Wire Interface - XMEGA implementation
+#include <twi_slave.h>
+#include <xmega_twi/twi_slave.h>
+
+// From module: Quadrature Decoder - XMEGA A/B/C/D Implementation
+#include <qdec.h>
+
 // From module: SPI - XMEGA implementation
 #include <usart_spi.h>
 #include <xmega_usart_spi/usart_spi.h>
@@ -63,6 +73,19 @@
 
 // From module: USART - Universal Synchronous/Asynchronous Receiver/Transmitter
 #include <usart.h>
+
+// From module: USB CDC Protocol
+#include <usb_protocol_cdc.h>
+
+// From module: USB Device CDC (Single Interface Device)
+#include <udi_cdc.h>
+
+// From module: USB Device CDC Standard I/O (stdio) - XMEGA implementation
+#include <stdio_usb.h>
+
+// From module: USB Device Stack Core (Common API)
+#include <udc.h>
+#include <udd.h>
 
 // From module: XMEGA compiler driver
 #include <compiler.h>
