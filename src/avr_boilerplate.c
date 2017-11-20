@@ -12,64 +12,99 @@
 #include "conf_build.h"
 #include "conf_application.h"
 
-#include <string.h>
-
 #define QUADRATURE_RESOLUTION (600)
 
+struct dma_channel_config dma_conf = { 0 };
+qdec_config_t qdec_conf[3];
 
-typedef struct Kiwi_Sensor {
+typedef volatile struct Kiwi_Sensor {
   uint8_t CONFIG;
   uint8_t STATUS;
   uint16_t ENC_POS[3];
   uint16_t ENC_FRQ[3];
-  uint8_t DIR;
+  uint8_t ENC_DIR;
 } Kiwi_Sensor_t;
 
-Kiwi_Sensor_t kiwi = {
-    .CONFIG = 0x01,
-    .STATUS = 0x02,
-    .ENC_POS = { 0x1010, 0x2020, 0x3030 },
-    .ENC_FRQ = { 0x1010, 0x2020, 0x3030 },
-    .DIR = ( 1 << 7 | 0 << 6 | 1 << 5 )
-};
-
-uint8_t recv_data[TWI_DATA_LEN] = {
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
-};
+volatile Kiwi_Sensor_t kiwi = { 0x00 };
 
 TWI_Slave_t slave;
 
+static inline void fill_twi_write_buffer(){
+  // Trigger a block of size TWI SIZE
+  dma_channel_trigger_block_transfer(TWI_DMA_CHANNEL);
+  // Wait for completion and reenable
+  while(dma_channel_is_busy(TWI_DMA_CHANNEL)){}
+  dma_channel_enable(TWI_DMA_CHANNEL);
+}
+
 static void slave_process(void) {
-  /** int i;
-  for(i = 0; i < TWI_DATA_LEN; i++) {
-    recv_data[i] = slave.receivedData[i];
-  } */
 
-  if( slave.status == TWIS_RESULT_BUFFER_OVERFLOW ) {
-    ioport_set_pin_high(LED1_PIN);
-  }
+  // Reset source ptr
+  dma_channel_disable(TWI_DMA_CHANNEL);
+  dma_channel_set_source_address( &dma_conf, (uint16_t)(uintptr_t) (((void*)&kiwi) + (slave.receivedData[0])) );
+  dma_channel_write_config(TWI_DMA_CHANNEL, &dma_conf);
+  dma_channel_enable(TWI_DMA_CHANNEL);
 
-  // got one.
-  memcpy( (void*)slave.sendData, (((void*)&kiwi) + slave.receivedData[0]), TWIS_SEND_BUFFER_SIZE);
+  fill_twi_write_buffer();
 
 }
 
 ISR(TWIC_TWIS_vect) {
+  // If the TWI buffer is depleted, refill it and send the data.
+  if( ( (slave.bytesSent == 0) || !(slave.interface->SLAVE.STATUS &
+      TWI_SLAVE_RXACK_bm) ) && (slave.bytesSent == TWIS_SEND_BUFFER_SIZE) ) {
+
+    // Refill and reset
+    fill_twi_write_buffer();
+    slave.bytesSent = 0;
+  }
   TWI_SlaveInterruptHandler(&slave);
-  recv_data[TWI_DATA_LEN-1] = 0x00; // always make 0 term
+}
+
+void qdec_read_cb(){
+
+  ioport_set_pin_low( LED2_PIN );
+
+  for( int i = 0; i < 3; i++ ) {
+    kiwi.ENC_POS[i] = qdec_get_position(&(qdec_conf[i]));
+    kiwi.ENC_FRQ[i] = qdec_get_frequency(&(qdec_conf[i]));
+    kiwi.ENC_DIR    = ( ( qdec_get_direction(&(qdec_conf[i])) ? 1u : 0 ) << (7-i) );
+  }
+
+  ioport_set_pin_high( LED2_PIN );
+
 }
 
 int main( ) {
 
-  qdec_config_t qdec_conf;
-  uint16_t qdec_pos, qdec_frq;
-  bool qdec_dir;
+  pmic_init();
 
   sysclk_init();
 
   board_init();
 
   irq_initialize_vectors();
+
+  // Configure TWI
+  sysclk_enable_peripheral_clock(TWI_DEVICE);
+
+  TWI_SlaveInitializeDriver(&slave, TWI_DEVICE, &slave_process);
+  TWI_SlaveInitializeModule(&slave, TWI_CHIP, TWI_SLAVE_INTLVL_MED_gc);
+
+  // Configure DMA
+  dma_enable();
+
+  dma_channel_set_interrupt_level(&dma_conf, DMA_INT_LVL_OFF ); // no DMA interrupts, busy wait
+  dma_channel_set_burst_length(&dma_conf, DMA_CH_BURSTLEN_4BYTE_gc );
+  dma_channel_set_transfer_count(&dma_conf, TWIS_SEND_BUFFER_SIZE );
+  dma_channel_set_src_reload_mode(&dma_conf, DMA_CH_DESTRELOAD_NONE_gc );
+  dma_channel_set_dest_reload_mode(&dma_conf, DMA_CH_DESTRELOAD_BLOCK_gc );
+  dma_channel_set_src_dir_mode(&dma_conf, DMA_CH_SRCDIR_INC_gc );
+  dma_channel_set_dest_dir_mode(&dma_conf, DMA_CH_DESTDIR_INC_gc );
+  dma_channel_set_trigger_source(&dma_conf,  DMA_CH_TRIGSRC_OFF_gc );
+  dma_channel_set_source_address(&dma_conf, (uint16_t)(uintptr_t)( &kiwi ));
+  dma_channel_set_destination_address(&dma_conf, (uint16_t)(uintptr_t)( slave.sendData ));
+  // Writing config and enabling is done in TWI interrupt handler.
 
   cpu_irq_enable();
 
@@ -80,78 +115,43 @@ int main( ) {
   // Enable the back light of the LCD
   ioport_set_pin_high(LCD_BACKLIGHT_ENABLE_PIN);
 
-  // Light up LED 1, wait for button press.
-  // ioport_set_pin_low(LED1_PIN);
+  // Disable all LEDs
+  ioport_set_pin_high(LED1_PIN);
+  ioport_set_pin_high(LED2_PIN);
 
-  // Light up LED 2, wait for button press.
-  ioport_set_pin_low(LED2_PIN);
+  // Setup QDEC, uses TC PORT D E F 0/1
+  for( int i = 0; i < 3; i++ ) {
+    struct qdec_config* qcp = &(qdec_conf[i]);
 
-  // Setup QDEC
-  qdec_get_config_defaults(&qdec_conf);
-  qdec_config_disable_index_pin(&qdec_conf);
-  qdec_config_phase_pins(&qdec_conf, QDEC_PORT, QDEC_PIN_BASE, false, 20 );
-  qdec_config_tc(&qdec_conf, QDEC_TC);
-  qdec_config_enable_freq(&qdec_conf, 100);
-  qdec_config_freq_tc(&qdec_conf, QDEC_FREQ_TC);
-  qdec_config_revolution(&qdec_conf, QUADRATURE_RESOLUTION);
+    qdec_get_config_defaults(qcp);
+    qdec_config_disable_index_pin(qcp);
+    qdec_config_phase_pins(qcp, QDEC0_PORT, QDEC0_PIN_BASE, false, 20 );
+    qdec_config_tc(qcp, QDEC0_TC);
+    qdec_config_enable_freq(qcp, 10 );
+    qdec_config_freq_tc(qcp, QDEC0_FREQ_TC);
+    qdec_config_revolution(qcp, QUADRATURE_RESOLUTION);
+    qdec_enabled(qcp);
+  }
 
-  qdec_enabled(&qdec_conf);
+  // Setup TC for measuring kiwi
+  // 1024x prescaler = 23.43 kHz, 10 Hz = 2343
+  tc_enable(TIMER_QDEC_READ);
+  tc_set_overflow_interrupt_callback(TIMER_QDEC_READ, qdec_read_cb);
+  tc_set_wgm(TIMER_QDEC_READ, TC_WG_NORMAL);
+  tc_write_period(TIMER_QDEC_READ, TIMER_QDEC_READ_PERIOD);
+  tc_write_clock_source(TIMER_QDEC_READ, TC2_CLKSEL_DIV1024_gc );
+  tc_set_overflow_interrupt_level(TIMER_QDEC_READ, TC_INT_LVL_LO);
+  tc_set_resolution(TIMER_QDEC_READ, TIMER_QDEC_READ_PERIOD);
 
-  // Configure TWI
-  sysclk_enable_peripheral_clock(TWI_DEVICE);
-
-  TWI_SlaveInitializeDriver(&slave, TWI_DEVICE, &slave_process);
-  TWI_SlaveInitializeModule(&slave, TWI_CHIP,
-                            TWI_SLAVE_INTLVL_MED_gc);
-
+  // Boot, start, etc.
   gfx_mono_init();
 
   char out_str[OUTPUT_STR_SIZE];
   snprintf(out_str, OUTPUT_STR_SIZE, "Git: %s\nDate: %s", GIT_COMMIT_HASH, BUILD_DATE);
   gfx_mono_draw_string(out_str, 0, 0, &sysfont);
 
-  gfx_mono_generic_draw_filled_rect(0,0,128,32,GFX_PIXEL_XOR);
-
-  delay_ms(250);
-
-
-  gfx_mono_generic_draw_filled_rect(0,0,128,32,GFX_PIXEL_CLR);
-
-
-  int i = 0;
-  for(;;){
-
-    i++;
-    delay_ms(10);
-
-    if(!(i%3))
-      ioport_toggle_pin(LED1_PIN);
-
-    if(!(i%5))
-      ioport_toggle_pin(LED2_PIN);
-
-    if((i%10))
-      continue;
-
-    qdec_pos = qdec_get_position(&qdec_conf);
-    qdec_dir = qdec_get_direction(&qdec_conf);
-    qdec_frq = qdec_get_frequency(&qdec_conf);
-
-    memset(out_str, 0x00, OUTPUT_STR_SIZE);
-
-    snprintf(out_str, OUTPUT_STR_SIZE, "%c%04u\n%u.%uHz\n%s",
-             qdec_dir ? '+' : '-',
-             qdec_pos,
-             qdec_frq/10,
-             qdec_frq%10,
-             recv_data );
-
-    //gfx_mono_generic_draw_filled_rect(0,0,128,32,GFX_PIXEL_CLR);
-    gfx_mono_draw_string(out_str, 0, 0, &sysfont);
-
-    printf("Tick: %d\r\n", i);
-
-  }
+  for(;;)
+    sleepmgr_enter_sleep();
 
   return 0;
 }

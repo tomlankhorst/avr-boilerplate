@@ -126,6 +126,7 @@ add_definitions("-c")
 # Which drivers and services to register
 set(ASF_DRIVERS
   cpu
+  dma
   nvm
   usart
   sleep
@@ -142,6 +143,7 @@ set(ASF_SERVICES
   ioport
   sleepmgr
   spi
+  hugemem
   # etc...
   )
 
@@ -209,6 +211,11 @@ asf_add_custom_source_file(util common stdio read.c)
 asf_add_custom_source_file(util common stdio write.c)
 asf_add_custom_source_file(util common stdio stdio_usb/stdio_usb.c)
 asf_add_custom_header_file(util common stdio stdio_usb/stdio_usb.h)
+
+#
+#asf_add_custom_source_file(service common hugemem avr8/avr8_hugemem.c)
+#asf_add_custom_header_file(service common hugemem generic/hugemem.h)
+#asf_add_custom_header_file(service common hugemem avr8/hugemem.h)
 
 # Finally, include the directories
 include_directories(${ASF_INCLUDE_DIRS})

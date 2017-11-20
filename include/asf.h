@@ -17,6 +17,9 @@
 // From module: Delay routines
 #include <delay.h>
 
+// From module: DMA - Direct Memory Access
+#include <dma.h>
+
 // From module: GFX Monochrome - Monochrome Graphic Library
 #include <gfx_mono.h>
 
